@@ -1,8 +1,12 @@
+import os
 from pathlib import Path
 
 from pydantic import BaseModel, Field
 
-DEFAULT_MODEL = "gemma4:e4b"
+# Default model: taken from the MTG_DRAFT_MODEL environment variable (set it in the
+# project .env file), falling back to an arbitrary tag. Any chat model the Ollama
+# server can run works; override per-run with --model.
+DEFAULT_MODEL = os.environ.get("MTG_DRAFT_MODEL", "gemma4:e4b")
 
 
 class Paths(BaseModel):
@@ -39,7 +43,7 @@ class LLMConfig(BaseModel):
     Parameters
     ----------
     model : str, optional
-        Ollama model tag. Default ``"gemma4:e4b"``.
+        Tag of any chat model the Ollama server can run. Default ``"gemma4:e4b"``.
     host : str, optional
         Ollama server URL. None lets the client fall back to ``OLLAMA_HOST`` or
         ``http://localhost:11434``. Default None.

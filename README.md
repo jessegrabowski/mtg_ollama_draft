@@ -21,10 +21,42 @@ prompt size).
 
 ## Setup
 
-Requires [pixi](https://pixi.sh) and a running Ollama with the drafter model pulled:
+This project needs two tools on your machine: **pixi** (environment manager) and
+**Ollama** (local LLM runtime).
+
+### 1. Install pixi
+
+```sh
+curl -fsSL https://pixi.sh/install.sh | sh
+```
+
+On macOS you can instead run `brew install pixi`. See the [pixi docs](https://pixi.sh)
+for other platforms. Restart your shell afterwards so `pixi` is on your `PATH`.
+
+### 2. Install Ollama
+
+Download the installer from [ollama.com/download](https://ollama.com/download), or on
+macOS run `brew install ollama`. Make sure the server is running — launch the Ollama
+app, or run `ollama serve` — then pull a model to draft with. Any Ollama chat model
+works; `gemma4:e4b` is the default simply because it is what the project was developed
+against:
 
 ```sh
 ollama pull gemma4:e4b
+```
+
+Use any other model by passing `--model <tag>` (see Usage), or change the default for
+every run by setting `MTG_DRAFT_MODEL` in the project's `.env` file:
+
+```sh
+MTG_DRAFT_MODEL=llama3.1:8b
+```
+
+Larger models generally draft better; smaller ones are faster.
+
+### 3. Install the project environment
+
+```sh
 pixi install
 ```
 
@@ -83,3 +115,7 @@ pixi run lint    # ruff
 | `records.py`  | Serialize results                                        |
 | `evaluate.py` | Post-draft deck build + LLM rating                       |
 | `cli.py`      | Command-line entrypoint                                  |
+
+## License
+
+MIT — see [LICENSE](LICENSE).
