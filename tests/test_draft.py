@@ -1,3 +1,4 @@
+from mtg_drafting.cards import Card
 from mtg_drafting.config import DraftConfig
 from mtg_drafting.draft import DraftState, pass_direction, rotate_packs
 from mtg_drafting.packs import generate_packs
@@ -64,12 +65,46 @@ def test_pack_snapshot_shrinks_through_a_round(cube):
     rounds, _ = generate_packs(cube, config)
     state = DraftState(config, rounds)
 
-    seat0_packs = []
-    state.run(
-        pick_first,
-        on_pick=lambda seat, record: seat0_packs.append(len(record.pack))
-        if seat.index == 0 and record.round_no == 0
-        else None,
-    )
+    seat0_pack_sizes = []
+
+    def record_seat0_round0(seat, record):
+        if seat.index == 0 and record.round_no == 0:
+            seat0_pack_sizes.append(len(record.pack))
+
+    state.run(pick_first, on_pick=record_seat0_round0)
     # Seat 0 sees a 15-card pack, then 14, ... as picks deplete the round's packs.
-    assert seat0_packs == list(range(config.cards_per_pack, 0, -1))
+    assert seat0_pack_sizes == list(range(config.cards_per_pack, 0, -1))
+
+
+def test_recent_picks_are_bounded_while_full_history_is_kept(cube):
+    config = DraftConfig(history_maxlen=5)
+    rounds, _ = generate_packs(cube, config)
+    state = DraftState(config, rounds)
+    state.run(pick_first)
+
+    for seat in state.seats:
+        assert len(seat.picks) == config.picks_per_seat
+        assert len(seat.recent) == config.history_maxlen
+
+
+def test_packs_pass_in_alternating_directions():
+    config = DraftConfig(n_seats=3, packs_per_round=2, cards_per_pack=3)
+
+    def pack(round_no, seat_no):
+        return [Card(name=f"r{round_no}s{seat_no}c{c}") for c in range(config.cards_per_pack)]
+
+    rounds = [[pack(r, s) for s in range(config.n_seats)] for r in range(config.packs_per_round)]
+    state = DraftState(config, rounds)
+
+    seat0_pack_origins: dict[int, list[str]] = {0: [], 1: []}
+
+    def record_seat0_origins(seat, record):
+        if seat.index == 0:
+            seat0_pack_origins[record.round_no].append(record.pack[0][:4])
+
+    state.run(pick_first, on_pick=record_seat0_origins)
+
+    # Round 0 passes toward higher seats: seat 0 receives packs opened at 0, 2, 1.
+    assert seat0_pack_origins[0] == ["r0s0", "r0s2", "r0s1"]
+    # Round 1 reverses: seat 0 receives packs opened at 0, 1, 2.
+    assert seat0_pack_origins[1] == ["r1s0", "r1s1", "r1s2"]

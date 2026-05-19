@@ -1,16 +1,24 @@
+import pytest
+
 from mtg_drafting.cube import _parse_line, load_cube
 from mtg_drafting.scryfall import ScryfallIndex
 
 
-def test_parse_line_extracts_quantity_comment_and_set_tag():
-    assert _parse_line("Sol Ring") == (1, "Sol Ring")
-    assert _parse_line("1 Sol Ring") == (1, "Sol Ring")
-    assert _parse_line("4x Lightning Bolt") == (4, "Lightning Bolt")
-    assert _parse_line("Brainstorm (MH2) 123") == (1, "Brainstorm")
-    assert _parse_line("3 Brainstorm (MH2) 123") == (3, "Brainstorm")
-    assert _parse_line("  Counterspell  # staple") == (1, "Counterspell")
-    assert _parse_line("# whole line comment") == (0, "")
-    assert _parse_line("") == (0, "")
+@pytest.mark.parametrize(
+    ("line", "expected"),
+    [
+        ("Sol Ring", (1, "Sol Ring")),
+        ("1 Sol Ring", (1, "Sol Ring")),
+        ("4x Lightning Bolt", (4, "Lightning Bolt")),
+        ("Brainstorm (MH2) 123", (1, "Brainstorm")),
+        ("3 Brainstorm (MH2) 123", (3, "Brainstorm")),
+        ("  Counterspell  # staple", (1, "Counterspell")),
+        ("# whole line comment", (0, "")),
+        ("", (0, "")),
+    ],
+)
+def test_parse_line(line, expected):
+    assert _parse_line(line) == expected
 
 
 def test_load_cube_resolves_and_collects_unresolved(tmp_path, cube):

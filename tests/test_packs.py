@@ -4,8 +4,12 @@ from mtg_drafting.config import DraftConfig
 from mtg_drafting.packs import generate_packs
 
 
-def test_pack_shapes(cube):
-    config = DraftConfig()
+@pytest.mark.parametrize(
+    "config",
+    [DraftConfig(), DraftConfig(n_seats=4, packs_per_round=2, cards_per_pack=10)],
+    ids=["default", "four-seat"],
+)
+def test_pack_shapes(cube, config):
     rounds, _ = generate_packs(cube, config)
 
     assert len(rounds) == config.packs_per_round
@@ -29,6 +33,14 @@ def test_small_cube_rejected(cube):
     config = DraftConfig()
     with pytest.raises(ValueError, match="needed"):
         generate_packs(cube[: config.min_cube_size - 1], config)
+
+
+def test_cube_of_exactly_min_size_is_accepted(cube):
+    config = DraftConfig()
+    rounds, _ = generate_packs(cube[: config.min_cube_size], config)
+
+    dealt = [card for round_packs in rounds for pack in round_packs for card in pack]
+    assert len(dealt) == config.min_cube_size
 
 
 def test_seed_is_reproducible(cube):
