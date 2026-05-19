@@ -1,0 +1,19 @@
+# pixi
+.pixi/
+.DS_Store
+.envrc
+
+# python
+__pycache__/
+*.pyc
+*.egg-info/
+.pytest_cache/
+.ruff_cache/
+
+# project artifacts
+data/cache/
+results/
+.ipynb_checkpoints/
+
+# secrets / local env
+.env

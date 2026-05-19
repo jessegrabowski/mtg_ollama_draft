@@ -1,0 +1,25 @@
+# Minimal 24-card sample cube — for smoke-testing the simulator.
+Swords to Plowshares
+Wrath of God
+Restoration Angel
+Elspeth, Sun's Champion
+Counterspell
+Brainstorm
+Snapcaster Mage
+Consecrated Sphinx
+Dark Confidant
+Hymn to Tourach
+Damnation
+Grave Titan
+Lightning Bolt
+Goblin Guide
+Hellrider
+Glorybringer
+Llanowar Elves
+Tarmogoyf
+Courser of Kruphix
+Craterhoof Behemoth
+Sol Ring
+Wasteland
+Batterskull
+Karn, Scion of Urza
