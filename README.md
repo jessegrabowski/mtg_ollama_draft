@@ -66,11 +66,49 @@ pixi install
 # Run a draft (downloads the Scryfall bulk snapshot on first run).
 pixi run draft data/cubes/my_cube.txt
 
-# Watch every pick: pack offered, card taken with reasoning, deck so far.
+# Watch every pick as a Rich panel (see below).
 pixi run draft data/cubes/my_cube.txt -v
 
 # Evaluate a finished draft.
 pixi run evaluate results/<run-dir>/
+```
+
+### Verbose output
+
+With `-v`, each pick renders as a single panel showing the pack, the picker's
+reasoning, the strategist's current plan, the seat's draft memory, and a running
+maindeck / sideboard view with a mana-curve histogram and decklist:
+
+```
+╭─ Seat 5 · Pack 1, Pick 2 (from 14) ───────────────────────────────────────────────────────╮
+│ Pack: Bad Moon · Phantom Monster · Goblin King · Scryb Sprites · Pit Trap · Earthquake ·  │
+│ Erg Raiders · Shambling Strider · Orcish Lumberjack · Sedge Troll · Seasinger · Black     │
+│ Knight · Mind Twist · River Merfolk                                                       │
+│                                                                                           │
+│ → Mind Twist  The standout here is Mind Twist, a powerful card advantage tool that fits   │
+│ both the control and open directions. It's a strong discard spell that can help control   │
+│ the game's tempo while also being raw power in an uncommitted pool. I take Mind Twist.    │
+│                                                                                           │
+│ Plan (committed)  [10/10] U control · [7/10] open open · [3/10] U midrange                │
+│ Needs: cheap removal · evasive 3-drop · card advantage                                    │
+│ Watching: free mana sources, recurring card draw effects                                  │
+│                                                                                           │
+│ Memory (1)                                                                                │
+│   1. [strat P1] Monitor for efficient removal and evasive creatures to support Ancestral  │
+│ Recall in a control or midrange strategy.                                                 │
+│                                                                                           │
+│ MAIN (2): U 1 · B 1                                   SIDE (0)                            │
+│  2 │   █                                              (empty)                             │
+│  1 │   █                                                                                  │
+│    └────────────────                                                                      │
+│      0 1 2 3 4 5 6 7+                                                                     │
+│                                                                                           │
+│ Instant (1)                                                                               │
+│   U   Ancestral Recall                                                                    │
+│ Sorcery (1)                                                                               │
+│   XB  Mind Twist                                                                          │
+│                                                                                           │
+╰───────────────────────────────────────────────────────────────────────────────────────────╯
 ```
 
 ### Pick speed and `--think`
@@ -96,25 +134,6 @@ add multiple copies to the cube.
 pixi run test    # unit tests
 pixi run lint    # ruff
 ```
-
-## Layout
-
-| Module        | Responsibility                                           |
-|---------------|----------------------------------------------------------|
-| `config.py`   | Draft / LLM / path configuration                         |
-| `cards.py`    | `Card` data model                                        |
-| `scryfall.py` | Bulk-data download, parse, offline name index            |
-| `cube.py`     | Parse a cube list into `Card`s                           |
-| `packs.py`    | Seeded pack generation                                   |
-| `seat.py`     | Per-seat pool, strategy summary, pick history            |
-| `draft.py`    | Draft state machine (passing, rounds)                    |
-| `llm.py`      | Ollama client wrapper with structured output             |
-| `prompts.py`  | Prompt construction                                      |
-| `agent.py`    | Make one pick for one seat                               |
-| `runner.py`   | Full draft loop                                          |
-| `records.py`  | Serialize results                                        |
-| `evaluate.py` | Post-draft deck build + LLM rating                       |
-| `cli.py`      | Command-line entrypoint                                  |
 
 ## License
 
