@@ -201,7 +201,14 @@ class DraftAgent:
         new_sidelined = (sideboard | chaff) & pool_names
         moves = _describe_sideline_changes(seat.sidelined, new_sidelined)
         seat.sidelined = new_sidelined
-        if moves:
+        # Prefer the strategist's own rationale ("we're in B aggro: added X,
+        # sidelined Y because ..."). Fall back to the delta string only when the
+        # strategist left the rationale blank but cards moved anyway, so a
+        # silent reclassification still leaves a paper trail.
+        rationale = new_state.pool_classification.rationale.strip()
+        if rationale:
+            seat.memory.append(f"[strat P{round_no + 1}] {rationale}")
+        elif moves:
             seat.memory.append(f"[strat P{round_no + 1}] {moves}")
         for note in new_state.notes_to_add:
             if note.strip():

@@ -60,6 +60,12 @@ _STRATEGIST_SYSTEM = (
     "filler, uncastable, off-plan, or dead. "
     "For the very first pack (pool < 16 cards) leave all three classification lists "
     "empty; there is not enough material to classify yet.\n\n"
+    "Use pool_classification.rationale to leave a short note for the next "
+    "strategist call. Lead with the objective behind this round's moves and cite "
+    "a representative card or two as evidence; do NOT list every move. It's a "
+    "note, not a change log - one or two sentences, enough to convince an expert "
+    "Magic player the moves were right. Skip with an empty string when nothing "
+    "meaningful moved.\n\n"
     "biggest_needs is an ordered list - the picker takes the first item as the highest "
     "priority pickup, the second as the next, and so on. Phrase needs as functions, "
     "not as named archetype payoffs. Good: 'cheap removal', 'evasive 3-drop', 'card "
@@ -106,6 +112,14 @@ class PoolClassification(BaseModel):
         "dead. Chaff sits in the sideboard pile alongside the real sideboard "
         "cards but, unlike them, you would not bring it in for any matchup. "
         "Empty for pack 1."
+    )
+    rationale: str = Field(
+        default="",
+        description="A short note to your future self about this round's "
+        "adjustments. Lead with the objective driving the moves and cite one or "
+        "two specific cards as evidence; do NOT enumerate every move. Two "
+        "sentences max - enough to convince an expert Magic player the moves "
+        "were right, no more. Empty when nothing meaningful moved.",
     )
 
 

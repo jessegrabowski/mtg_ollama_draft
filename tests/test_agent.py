@@ -178,8 +178,9 @@ def test_strategist_first_call_does_not_log_sideline_moves(cube):
 
 
 def test_strategist_subsequent_call_logs_sideline_moves(cube):
-    # Second strategist call moves a card OUT of sidelined - logged as
-    # "moved to maindeck" so a card silently flipping is traceable.
+    # Second strategist call moves a card OUT of sidelined - with no rationale
+    # provided the agent falls back to a "moved to maindeck" delta so a card
+    # silently flipping is still traceable.
     seat = Seat(index=0, history_maxlen=5)
     seat.pool = [cube[0], cube[1], cube[2]]
     seat.sidelined = {"Card 002"}  # already classified by an earlier call
@@ -196,6 +197,31 @@ def test_strategist_subsequent_call_logs_sideline_moves(cube):
     assert any(
         "moved to maindeck: Card 002" in note for note in seat.memory
     )
+
+
+def test_strategist_rationale_replaces_sideline_delta_note(cube):
+    # When the strategist provides a pool_classification.rationale, that prose
+    # IS the memory note - the delta string is dropped so the LLM's framing
+    # ("we're in B aggro: ...") shows up instead of "moved to sideboard: ...".
+    seat = Seat(index=0, history_maxlen=5)
+    seat.pool = [cube[0], cube[1], cube[2]]
+    seat.sidelined = {"Card 002"}
+    strategist_json = (
+        '{"directions": [{"colors": ["B"], "role": "beatdown", "weight": 9, '
+        '"rationale": "ok"}], "color_commitment": "committed", '
+        '"biggest_needs": ["removal"], "watching_for": "free mana", '
+        '"pool_classification": {"maindeck": ["Card 000", "Card 001", "Card 002"], '
+        '"sideboard": [], "chaff": [], '
+        '"rationale": "B beatdown is the plan; bringing Card 002 back into the '
+        'maindeck because it fits the curve."}}'
+    )
+    pack = cube[:5]
+    agent = DraftAgent(StubLLM([strategist_json, _pick_reply("Card 003")]), DraftConfig())
+    agent.pick(seat, pack, round_no=0, pick_no=1)
+    strat_notes = [n for n in seat.memory if "[strat P1]" in n]
+    assert any("B beatdown is the plan" in n for n in strat_notes)
+    # The delta string is suppressed when the rationale fired.
+    assert not any("moved to maindeck:" in n for n in strat_notes)
 
 
 def test_strategist_call_populates_sidelined_from_pool_classification(cube):
