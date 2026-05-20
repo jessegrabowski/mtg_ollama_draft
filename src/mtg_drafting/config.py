@@ -48,9 +48,9 @@ class LLMConfig(BaseModel):
         Ollama server URL. None lets the client fall back to ``OLLAMA_HOST`` or
         ``http://localhost:11434``. Default None.
     think : bool, optional
-        Enable the model's hidden reasoning pass. Off by default for speed (~1-2s per
-        pick vs ~10-16s) and because the structured answer is reliable without it. When
-        on, ``num_predict`` is bypassed so reasoning is never truncated. Default False.
+        Enable the model's hidden reasoning pass. When on, ``num_predict`` is
+        bypassed so reasoning is never truncated; thinking is much slower per pick
+        and the structured answer is reliable without it. Default False.
     temperature : float, optional
         Sampling temperature. Default 0.7.
     num_ctx : int, optional

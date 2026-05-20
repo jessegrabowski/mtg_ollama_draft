@@ -8,6 +8,15 @@ from mtg_drafting.config import LLMConfig
 
 Message = dict[str, str]
 
+# Transport-level transient failures we retry. Distinct from Ollama 4xx responses
+# (model not found, bad request) which are permanent - retrying those just delays
+# the inevitable error and confuses the operator with backoff sleeps.
+_TRANSIENT_TRANSPORT_ERRORS = (
+    httpx.TimeoutException,
+    httpx.NetworkError,
+    httpx.RemoteProtocolError,
+)
+
 
 class LLMClient:
     """Thin wrapper over an Ollama model that returns schema-validated responses.
@@ -26,14 +35,20 @@ class LLMClient:
         self.config = config
         self._client = ollama.Client(host=config.host, timeout=config.timeout)
 
-    def chat(self, messages: list[Message], schema: type[BaseModel]) -> str:
+    def chat(
+        self,
+        messages: list[Message],
+        schema: type[BaseModel],
+        *,
+        num_predict: int | None = None,
+    ) -> str:
         """Send a chat request constrained to ``schema`` and return the raw reply.
 
-        Generation is constrained to ``schema``'s JSON shape, but the reply is returned
-        as raw text rather than parsed — the model can still truncate at the token
-        limit, and the caller decides how strict to be about that.
+        Constrains generation to ``schema``'s JSON shape and returns the raw text
+        without parsing — the model can still truncate at the token limit, and the
+        caller decides how strict to be about that.
 
-        Transient transport failures (a dropped connection, a timeout) are retried with
+        Retries transient transport failures (a dropped connection, a timeout) with
         exponential backoff so a network blip cannot abort a long-running draft.
 
         Parameters
@@ -42,6 +57,11 @@ class LLMClient:
             Ollama chat messages, each with ``role`` and ``content``.
         schema : type
             Pydantic model whose JSON schema constrains generation.
+        num_predict : int, optional
+            Per-call override of the response token cap. Use for callers whose schema
+            scales with input size (strategist classifying a 30-card pool, evaluator
+            with its large verdict schema). When None, ``LLMConfig.num_predict``
+            applies; when ``think`` is on, the cap is bypassed regardless. Default None.
 
         Returns
         -------
@@ -54,10 +74,15 @@ class LLMClient:
             If transport errors persist past ``transport_retries`` attempts.
         """
         last_exc: Exception | None = None
+        # Thinking needs an uncapped budget; -1 lets Ollama generate freely.
+        if self.config.think:
+            effective_num_predict = -1
+        else:
+            effective_num_predict = (
+                num_predict if num_predict is not None else self.config.num_predict
+            )
         for attempt in range(1 + self.config.transport_retries):
             try:
-                # Thinking needs an uncapped budget; -1 lets Ollama generate freely.
-                num_predict = -1 if self.config.think else self.config.num_predict
                 response = self._client.chat(
                     model=self.config.model,
                     messages=messages,
@@ -66,11 +91,11 @@ class LLMClient:
                     options={
                         "temperature": self.config.temperature,
                         "num_ctx": self.config.num_ctx,
-                        "num_predict": num_predict,
+                        "num_predict": effective_num_predict,
                     },
                 )
                 return response["message"]["content"]
-            except (httpx.HTTPError, ollama.ResponseError) as exc:
+            except _TRANSIENT_TRANSPORT_ERRORS as exc:
                 last_exc = exc
                 time.sleep(min(2**attempt, 10))
         raise RuntimeError(
@@ -89,8 +114,8 @@ class LLMClient:
             local = {m.model for m in self._client.list().models}
         except Exception as exc:  # noqa: BLE001 - re-raised with actionable guidance
             raise RuntimeError(
-                f"Cannot reach Ollama at {self.config.host or 'the default host'}. "
-                "Is `ollama serve` running?"
+                f"Cannot reach Ollama at {self.config.host or 'the default host'} "
+                f"({type(exc).__name__}: {exc}). Is `ollama serve` running?"
             ) from exc
         if self.config.model not in local:
             raise RuntimeError(
