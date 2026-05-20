@@ -11,7 +11,7 @@ _CATEGORY_ORDER = ["White", "Blue", "Black", "Red", "Green", "Multicolor", "Colo
 
 
 def _decklist(pool: list[Card]) -> str:
-    """Render a seat's pool as a human-readable, colour-grouped card list."""
+    """Render a seat's pool as a human-readable, color-grouped card list."""
     grouped: dict[str, list[Card]] = {}
     for card in pool:
         grouped.setdefault(card.color_category, []).append(card)
@@ -58,7 +58,12 @@ def save_draft(state: DraftState, config: DraftConfig, cube_name: str) -> Path:
         "seats": [
             {
                 "index": seat.index,
-                "strategy": seat.strategy,
+                "strategy_state": (
+                    seat.strategy_state.model_dump() if seat.strategy_state else None
+                ),
+                "strategy_summary": seat.strategy_summary,
+                "memory": list(seat.memory),
+                "sidelined": sorted(seat.sidelined),
                 "pool": [card.name for card in seat.pool],
                 "picks": [asdict(pick) for pick in seat.picks],
             }
