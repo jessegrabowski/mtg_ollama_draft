@@ -64,8 +64,10 @@ _STRATEGIST_SYSTEM = (
     "strategist call. Lead with the objective behind this round's moves and cite "
     "a representative card or two as evidence; do NOT list every move. It's a "
     "note, not a change log - one or two sentences, enough to convince an expert "
-    "Magic player the moves were right. Skip with an empty string when nothing "
-    "meaningful moved.\n\n"
+    "Magic player the moves were right. Skip with an empty string in two cases: "
+    "(a) nothing meaningful moved, or (b) DRAFT MEMORY already records the same "
+    "observation. Check existing notes before writing; do not restate what is "
+    "already there in slightly different words.\n\n"
     "biggest_needs is an ordered list - the picker takes the first item as the highest "
     "priority pickup, the second as the next, and so on. Phrase needs as functions, "
     "not as named archetype payoffs. Good: 'cheap removal', 'evasive 3-drop', 'card "
@@ -187,7 +189,8 @@ class StrategyState(BaseModel):
         "Think inferences, not raw data. Examples of the shape: 'cuts in green at "
         "pack 1 - someone upstream is on green', 'no premium white cards arrived "
         "in pack 1 - white was open and we missed it'. Skip with an empty list when "
-        "no new inferences came out of this pack.",
+        "no new inferences came out of this pack, AND skip any individual note that "
+        "restates an observation already in DRAFT MEMORY - check before adding.",
     )
 
     @property
