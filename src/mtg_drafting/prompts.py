@@ -29,6 +29,13 @@ _SYSTEM_PROMPT = (
     "biggest_needs is a soft hint, not a constraint; do not pass a clearly stronger "
     "card for an in-color playable just because the pool has a couple of cards in "
     "one color. The pool is still small.\n\n"
+    "Open also means open to BUILD-AROUNDS - cards whose ceiling is much higher "
+    "than their baseline when the rest of the deck supports them (engines, "
+    "synergy payoffs, cost-reducers that want spell density, cards that grow "
+    "with a sacrifice or graveyard theme). Early in the draft you have time to "
+    "commit to a build-around and pick up its support in later packs; late in "
+    "the draft you do not. A premium build-around early is worth taking even "
+    "when it doesn't satisfy a fundamental value equation on its own.\n\n"
     "WHEN PRIMARY ROLE IS committed (beatdown/control/midrange): pick the card "
     "that best fits the primary plan and the biggest-needs list. A card that "
     "strongly fits a secondary direction can pull weight toward it.\n\n"
@@ -106,14 +113,16 @@ class PickResponse(BaseModel):
     note: str | None = Field(
         default=None,
         max_length=160,
-        description="OPTIONAL one-sentence observation worth carrying forward. "
-        "Think inferences, not raw data. Examples of the shape: 'got Mox Ruby at "
-        "P1.3, something stronger must have been in the pack', 'hoping "
-        "Counterspell wheels in pack 2', 'the Counterspell I was tracking did "
-        "not come back, I am not the only blue drafter', 'P1.7 had no blue "
-        "cards, someone upstream is on blue'. Leave null when nothing happened "
-        "this pick worth carrying forward. Most picks should leave it null - the "
-        "bar is 'changes how I think about future picks', not 'I had thoughts'.",
+        description="OPTIONAL one-sentence inference about the table - what this "
+        "pack tells you about what other seats are drafting. The highest-value "
+        "notes are signal reads about pack composition: 'pack heavy in white - "
+        "white may be open downstream', 'no blue in this pack, someone upstream "
+        "is on blue', 'got Mox Ruby at P1.3, something stronger must have been "
+        "in the pack', 'the Counterspell I was tracking did not come back, I am "
+        "not the only blue drafter'. Skip individual card commentary ('I really "
+        "like this card') and skip any observation already in DRAFT MEMORY - "
+        "check before writing. Leave null only when this pick told you nothing "
+        "new about what other seats are doing.",
     )
 
 
