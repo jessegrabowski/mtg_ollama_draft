@@ -1,10 +1,13 @@
 import json
+import logging
 from pathlib import Path
 
 import requests
 from tqdm import tqdm
 
 from mtg_drafting.cards import Card
+
+_log = logging.getLogger(__name__)
 
 BULK_DATA_URL = "https://api.scryfall.com/bulk-data"
 USER_AGENT = "mtg-drafting/0.1 (cube draft simulator)"
@@ -19,6 +22,45 @@ _SKIP_LAYOUTS = {
     "planar",
     "vanguard",
 }
+
+# Type-line strings used by Scryfall as placeholders for entries that slip past the
+# layout filter - most commonly Mystery Booster playtest cards typed only as
+# ``"Card"``. Without this filter a placeholder entry can win the name slot in the
+# index over a real card with the same name.
+_PLACEHOLDER_TYPE_LINES = frozenset({"", "Card"})
+
+# Scryfall set_type values whose cards are not part of standard cube drafting.
+# Catches silver-bordered Un-sets ("funny": Unstable, Unhinged, Unglued, etc.) and
+# Mystery Booster playtest cards / oversized memorabilia ("memorabilia").
+_SKIP_SET_TYPES = frozenset({"funny", "memorabilia", "minigame"})
+
+
+def _is_real_card_type(type_line: str) -> bool:
+    """True when this entry has a real card type.
+
+    False for placeholder type lines (``""``, ``"Card"``) and for token cards typed
+    ``"Token ..."`` that slip past the layout filter (e.g. Wilds of Eldraine Role
+    enchantment tokens carry layout ``"normal"`` but type ``"Token Enchantment"``)."""
+    if type_line in _PLACEHOLDER_TYPE_LINES:
+        return False
+    if type_line.startswith("Token "):
+        return False
+    return True
+
+
+def _is_draftable_obj(obj: dict) -> bool:
+    """True when this Scryfall bulk-data entry is a real, draftable Magic card.
+
+    Combines the layout filter, the set-type filter, and the type-line filter into
+    one predicate. Each catches a different class of non-cards (tokens / emblems /
+    schemes by layout; Un-sets and playtest cards by set_type; placeholder and
+    token type lines by type_line) and together they leave the index with only the
+    cards a cube might actually contain."""
+    if obj.get("layout") in _SKIP_LAYOUTS:
+        return False
+    if obj.get("set_type") in _SKIP_SET_TYPES:
+        return False
+    return _is_real_card_type(obj.get("type_line", ""))
 
 
 def _normalize(name: str) -> str:
@@ -75,11 +117,36 @@ class ScryfallIndex:
     def __init__(self, cards: list[Card], updated_at: str = ""):
         self.updated_at = updated_at
         self._by_name: dict[str, Card] = {}
-        for card in cards:
-            self._by_name.setdefault(_normalize(card.name), card)
+        # Two-pass registration so a real standalone always beats a split's
+        # front-face shortcut. Without this, "Smelt // Herd // Saw" loading before
+        # the standalone "Smelt" would steal the "smelt" key, and the standalone
+        # would lose silently (or noisily, given the collision warning) for no
+        # good reason.
+        real = [c for c in cards if _is_real_card_type(c.type_line)]
+        for card in real:
+            self._register(_normalize(card.name), card)
+        # Split-card front-face shortcuts run second: setdefault so any standalone
+        # registered in pass 1 keeps the slot. Shortcut-vs-shortcut collisions
+        # (multiple splits sharing a front-face word - "Start", "Fast", "Royal")
+        # are expected ambiguity and stay silent.
+        for card in real:
             if " // " in card.name:
-                front = card.name.split(" // ", 1)[0]
-                self._by_name.setdefault(_normalize(front), card)
+                front_key = _normalize(card.name.split(" // ", 1)[0])
+                self._by_name.setdefault(front_key, card)
+
+    def _register(self, key: str, card: Card) -> None:
+        """Insert ``card`` under ``key`` if free; otherwise keep the first registration
+        and log the collision so silently-dropped real-vs-real name clashes (rare but
+        possible with reprints under errata) leave a paper trail."""
+        existing = self._by_name.get(key)
+        if existing is None:
+            self._by_name[key] = card
+            return
+        if existing.name != card.name or existing.type_line != card.type_line:
+            _log.warning(
+                "ScryfallIndex name collision on %r: kept %r (%s), dropped %r (%s)",
+                key, existing.name, existing.type_line, card.name, card.type_line,
+            )
 
     def __len__(self) -> int:
         return len(self._by_name)
@@ -124,18 +191,16 @@ def load_index(cache_dir: Path, refresh: bool = False) -> ScryfallIndex:
     cache_dir.mkdir(parents=True, exist_ok=True)
     index_path = cache_dir / "card_index.json"
 
-    if index_path.exists() and not refresh:
-        payload = json.loads(index_path.read_text())
-        cards = [Card.model_validate(c) for c in payload["cards"]]
-        return ScryfallIndex(cards, payload.get("updated_at", ""))
+    cached_payload = (
+        json.loads(index_path.read_text()) if index_path.exists() else None
+    )
+
+    if cached_payload is not None and not refresh:
+        return _index_from_payload(cached_payload)
 
     meta = _oracle_bulk_meta()
-    if index_path.exists():
-        cached_at = json.loads(index_path.read_text()).get("updated_at", "")
-        if cached_at == meta["updated_at"]:
-            payload = json.loads(index_path.read_text())
-            cards = [Card.model_validate(c) for c in payload["cards"]]
-            return ScryfallIndex(cards, cached_at)
+    if cached_payload is not None and cached_payload.get("updated_at") == meta["updated_at"]:
+        return _index_from_payload(cached_payload)
 
     raw_path = cache_dir / "oracle_cards.json"
     _download(meta["download_uri"], raw_path)
@@ -144,7 +209,7 @@ def load_index(cache_dir: Path, refresh: bool = False) -> ScryfallIndex:
     cards = [
         _card_from_scryfall(obj)
         for obj in tqdm(raw, desc="Parsing cards", unit="card")
-        if obj.get("layout") not in _SKIP_LAYOUTS
+        if _is_draftable_obj(obj)
     ]
     index_path.write_text(
         json.dumps(
@@ -152,6 +217,12 @@ def load_index(cache_dir: Path, refresh: bool = False) -> ScryfallIndex:
         )
     )
     return ScryfallIndex(cards, meta["updated_at"])
+
+
+def _index_from_payload(payload: dict) -> ScryfallIndex:
+    """Build a :class:`ScryfallIndex` from a previously cached JSON payload."""
+    cards = [Card.model_validate(c) for c in payload["cards"]]
+    return ScryfallIndex(cards, payload.get("updated_at", ""))
 
 
 def _download(url: str, dest: Path) -> None:
