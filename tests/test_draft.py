@@ -6,7 +6,7 @@ from mtg_drafting.packs import generate_packs
 
 def pick_first(seat, pack, round_no, pick_no):
     """Deterministic picker: always take the first card in the pack."""
-    return pack[0], "first card"
+    return pack[0], "first card", None
 
 
 def test_pass_direction_alternates():

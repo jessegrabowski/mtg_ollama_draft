@@ -6,8 +6,10 @@ from mtg_drafting.packs import Rounds
 from mtg_drafting.seat import PickRecord, Seat
 
 # Chooses a card from a pack. Receives the seat, the pack, and the round / pick
-# indices; returns the taken card and a short reason for the pick.
-PickFn = Callable[[Seat, list[Card], int, int], tuple[Card, str]]
+# indices; returns ``(card, reason, hoping_to_wheel)``. ``hoping_to_wheel`` is the
+# name of a card in the pack the picker hopes will wheel back, or None when no
+# wheel candidate was named.
+PickFn = Callable[[Seat, list[Card], int, int], tuple[Card, str, str | None]]
 
 # Callback fired after each completed pick, for progress display or streaming output.
 PickHook = Callable[[Seat, PickRecord], None]
@@ -72,7 +74,9 @@ class DraftState:
                 for seat in self.seats:
                     pack = self.packs_in_flight[seat.index]
                     pack_snapshot = [card.name for card in pack]
-                    card, reasoning = pick_fn(seat, pack, round_no, pick_no)
+                    card, reasoning, hoping_to_wheel = pick_fn(
+                        seat, pack, round_no, pick_no
+                    )
                     pack.remove(card)
                     record = PickRecord(
                         round_no=round_no,
@@ -80,6 +84,7 @@ class DraftState:
                         pack=pack_snapshot,
                         chosen=card.name,
                         reasoning=reasoning,
+                        hoping_to_wheel=hoping_to_wheel,
                     )
                     seat.add_pick(card, record)
                     if on_pick is not None:

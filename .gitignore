@@ -17,3 +17,6 @@ results/
 
 # secrets / local env
 .env
+
+# local scratch files
+scratch*.py
