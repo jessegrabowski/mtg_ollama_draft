@@ -15,15 +15,16 @@ _PICK_RE = re.compile(r'"pick"\s*:\s*"((?:[^"\\]|\\.)*)"')
 
 
 def _record_wheel_if_any(seat: Seat, pack: list[Card], round_no: int, pick_no: int) -> None:
-    """Append a memory note when the current pack is a wheel of one the seat saw
-    earlier this round.
+    """Append a memory note when a wheeled pack carries a hit-or-miss verdict on an
+    earlier ``hoping_to_wheel`` prediction this round.
 
     A wheel is detected by content subset: the current pack's card names form a
     subset of some earlier ``PickRecord.pack`` from the same round, and the earlier
-    pack was strictly larger. The note records the pick coordinates and pack size;
-    it also cross-references any earlier ``hoping_to_wheel`` predictions this round
-    against the returning pack so the LLM sees which hopes hit and which missed
-    ("Counterspell did not come back" is exactly the inference the strategist needs)."""
+    pack was strictly larger. A wheel without any active prediction to evaluate
+    carries no signal worth remembering - just a mechanical fact of how the draft
+    rotates - so the note is suppressed in that case. With at least one prediction,
+    the note reports which hopes hit ("X wheeled") and which missed ("Y did not
+    wheel"), both of which are real reads about the table."""
     current_names = {card.name for card in pack}
     if not current_names:
         return
@@ -34,20 +35,18 @@ def _record_wheel_if_any(seat: Seat, pack: list[Card], round_no: int, pick_no: i
         if len(earlier_names) > len(current_names) and current_names <= earlier_names:
             hopes = [r.hoping_to_wheel for r in seat.picks
                      if r.round_no == round_no and r.hoping_to_wheel]
+            if not hopes:
+                return
             hit = [h for h in hopes if h in current_names]
             miss = [h for h in hopes if h not in current_names]
-            note = (
-                f"[wheel] P{round_no + 1}.{record.pick_no + 1} returned at "
-                f"P{round_no + 1}.{pick_no + 1} ({len(pack)} cards left)"
-            )
-            tail = []
+            parts = []
             if hit:
-                tail.append(f"wheeled: {', '.join(hit)}")
+                parts.append(f"wheeled: {', '.join(hit)}")
             if miss:
-                tail.append(f"did NOT wheel: {', '.join(miss)}")
-            if tail:
-                note += " — " + "; ".join(tail)
-            seat.memory.append(note)
+                parts.append(f"did NOT wheel: {', '.join(miss)}")
+            seat.memory.append(
+                f"[wheel P{round_no + 1}.{pick_no + 1}] " + "; ".join(parts)
+            )
             return
 
 

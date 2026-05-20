@@ -89,11 +89,16 @@ class PickResponse(BaseModel):
     hoping_to_wheel: str | None = Field(
         default=None,
         description="OPTIONAL: name of one card in the offered pack you hope will "
-        "wheel back to you. Be realistic - the pack passes through 7 downstream "
-        "players before it returns, so anything premium (free mana, top removal, "
-        "format-defining bombs) is essentially never going to wheel. Mark a card "
-        "only when it's strong enough you'd want it AND downstream players "
-        "probably have higher priorities. Most picks leave this null.",
+        "wheel back. A wheel is when the pack passes through 7 other seats and "
+        "returns - so a wheel candidate is a card you'd want as a later pick AND "
+        "that downstream seats probably have other priorities than. Naming a card "
+        "here does NOT take it; it logs a prediction the wheel detector checks. "
+        "If the card does wheel, that's a strong signal other players did not "
+        "value it; if it does not, another seat is competing for your direction. "
+        "You are not obligated to take a card you marked - by the time the pack "
+        "returns your plan may have shifted, and passing it again is fine. "
+        "Pack 1 picks 1-3 rarely have wheel candidates (everything is premium); "
+        "mid- and late-pack picks often do.",
     )
     note: str | None = Field(
         default=None,

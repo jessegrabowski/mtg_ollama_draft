@@ -238,13 +238,12 @@ def test_picker_skips_memory_when_note_is_null(cube):
     assert len(seat.memory) == 0
 
 
-def test_wheel_detection_appends_memory_note(cube):
-    # Seat picks from a 15-card pack at P1.1, then sees the same pack returning at
-    # P1.9 with the 7 cards left after seats 2-8 each took one. Code-side wheel
-    # detection should append a [wheel ...] note.
+def test_wheel_detection_silent_without_hopes(cube):
+    # Seat picks from a 15-card pack at P1.1 with no hoping_to_wheel set, then sees
+    # the same pack returning at P1.9. A wheel without a prediction to evaluate
+    # carries no signal worth remembering, so the detector must stay silent.
     seat = Seat(index=0, history_maxlen=5)
     full_pack = cube[:15]
-    # Simulate the P1.1 pick: seat takes card 0, records the original 15-card pack.
     seat.add_pick(
         full_pack[0],
         PickRecord(
@@ -252,16 +251,10 @@ def test_wheel_detection_appends_memory_note(cube):
             reasoning="early",
         ),
     )
-    # Now P1.9 - the pack has wheeled, 7 cards left. They're a subset of the original.
-    wheeled_pack = cube[1:8]  # any 7 cards that were in the original 15
+    wheeled_pack = cube[1:8]
     agent = DraftAgent(StubLLM([_pick_reply("Card 002")]), DraftConfig())
     agent.pick(seat, wheeled_pack, round_no=0, pick_no=8)
-    # The note records coordinates and count, no card list - the actual contents
-    # are visible in the pack the picker is about to reason over.
-    wheel_note = next(n for n in seat.memory if "[wheel]" in n)
-    assert "P1.1" in wheel_note
-    assert "P1.9" in wheel_note
-    assert "7 cards" in wheel_note
+    assert not any("[wheel" in note for note in seat.memory)
 
 
 def test_wheel_detection_cross_references_hoping_to_wheel(cube):
@@ -286,7 +279,7 @@ def test_wheel_detection_cross_references_hoping_to_wheel(cube):
     wheeled_pack = cube[1:8]  # subset of pick 0's pack, contains Card 002
     agent = DraftAgent(StubLLM([_pick_reply("Card 003")]), DraftConfig())
     agent.pick(seat, wheeled_pack, round_no=0, pick_no=8)
-    wheel_note = next(n for n in seat.memory if "[wheel]" in n)
+    wheel_note = next(n for n in seat.memory if "[wheel" in n)
     assert "wheeled: Card 002" in wheel_note
     assert "did NOT wheel: Card 050" in wheel_note
 
