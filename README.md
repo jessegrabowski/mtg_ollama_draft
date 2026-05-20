@@ -38,11 +38,11 @@ for other platforms. Restart your shell afterwards so `pixi` is on your `PATH`.
 Download the installer from [ollama.com/download](https://ollama.com/download), or on
 macOS run `brew install ollama`. Make sure the server is running — launch the Ollama
 app, or run `ollama serve` — then pull a model to draft with. Any Ollama chat model
-works; `gemma4:e4b` is the default simply because it is what the project was developed
-against:
+works; `gemma4:26b` is the default because it strikes a good balance of speed and
+quality on the test system (an M4 MacBook Pro):
 
 ```sh
-ollama pull gemma4:e4b
+ollama pull gemma4:26b
 ```
 
 Use any other model by passing `--model <tag>` (see Usage), or change the default for
