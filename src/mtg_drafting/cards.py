@@ -1,6 +1,6 @@
 from pydantic import BaseModel, ConfigDict
 
-# Canonical WUBRG ordering used to sort and group cards by colour.
+# Canonical WUBRG ordering used to sort and group cards by color.
 COLOR_ORDER = ["W", "U", "B", "R", "G"]
 COLOR_NAMES = {"W": "White", "U": "Blue", "B": "Black", "R": "Red", "G": "Green"}
 
@@ -24,10 +24,13 @@ class Card(BaseModel):
     oracle_text : str
         Rules text. Empty if the card has none (e.g. a vanilla creature).
     colors : list of str
-        Colours of the card itself, as WUBRG letters.
+        Colors of the card itself, as WUBRG letters.
     color_identity : list of str
-        Colour identity, as WUBRG letters. Includes colours from mana symbols in rules
+        Color identity, as WUBRG letters. Includes colors from mana symbols in rules
         text, which matters for build-around and fixing decisions.
+    produced_mana : list of str
+        Colors of mana this card can produce (WUBRG plus ``C`` for colorless). Empty
+        for non-mana sources. Drives the playability simulator's land base.
     power : str, optional
         Creature power as printed (may be ``"*"``). None for non-creatures.
     toughness : str, optional
@@ -45,6 +48,7 @@ class Card(BaseModel):
     oracle_text: str = ""
     colors: list[str] = []
     color_identity: list[str] = []
+    produced_mana: list[str] = []
     power: str | None = None
     toughness: str | None = None
     rarity: str = ""
@@ -58,8 +62,17 @@ class Card(BaseModel):
         return "Creature" in self.type_line
 
     @property
+    def producible_colors(self) -> list[str]:
+        """WUBRG colors of mana this card can produce.
+
+        Falls back to ``color_identity`` when ``produced_mana`` is empty; identity is
+        a sound approximation for most lands."""
+        source = self.produced_mana or self.color_identity
+        return [c for c in source if c in COLOR_ORDER]
+
+    @property
     def color_category(self) -> str:
-        """Bucket name used to group a pool: a single colour, ``Multicolor``,
+        """Bucket name used to group a pool: a single color, ``Multicolor``,
         ``Colorless``, or ``Land``."""
         if self.is_land:
             return "Land"

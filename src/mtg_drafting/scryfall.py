@@ -93,6 +93,9 @@ def _card_from_scryfall(obj: dict) -> Card:
         power = obj.get("power")
         toughness = obj.get("toughness")
 
+    # produced_mana lives on the top-level object even for multi-face cards.
+    produced_mana = obj.get("produced_mana", [])
+
     return Card(
         name=obj["name"],
         mana_cost=mana_cost,
@@ -101,6 +104,7 @@ def _card_from_scryfall(obj: dict) -> Card:
         oracle_text=oracle_text,
         colors=colors,
         color_identity=obj.get("color_identity", []),
+        produced_mana=produced_mana,
         power=power,
         toughness=toughness,
         rarity=obj.get("rarity", ""),
