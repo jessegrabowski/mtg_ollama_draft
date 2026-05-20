@@ -69,10 +69,11 @@ _STRATEGIST_SYSTEM = (
     "drive most premium cards in Magic: they break a symmetry of the game (free extra "
     "mana skips the one-land-per-turn rule; instants act outside the turn structure), "
     "or they generate card advantage (one card destroying many; one card drawing "
-    "several). Phrase what you are looking for in those terms - 'free mana that breaks "
-    "one-land-per-turn', 'sweepers that two-for-one' - and let the picker recognise "
-    "specific cards that fit. Also mention signal cards: what kinds of picks would "
-    "shift the color or role weights.\n\n"
+    "several). Phrase watching_for in structural terms - describe the shape of the "
+    "effect, not the card name or archetype - so the picker can recognise specific "
+    "cards that fit. Vary your phrasing pack to pack; do not copy the same description "
+    "every call. Also mention signal cards: what kinds of picks would shift the color "
+    "or role weights.\n\n"
     "Anchor on bombs and build-arounds. A bomb in the pool is a card that wins "
     "games on its own when cast; the plan should shape itself around being able "
     "to cast and protect it (colors, curve, interaction to clear the way). A "
@@ -171,9 +172,8 @@ class StrategyState(BaseModel):
         description="0-3 observational notes to append to the seat's draft memory. "
         "Think inferences, not raw data. Examples of the shape: 'cuts in green at "
         "pack 1 - someone upstream is on green', 'no premium white cards arrived "
-        "in pack 1 - white was open and we missed it', 'expect a sweeper to wheel "
-        "since nobody else seems to want them'. Skip with an empty list when no "
-        "new inferences came out of this pack.",
+        "in pack 1 - white was open and we missed it'. Skip with an empty list when "
+        "no new inferences came out of this pack.",
     )
 
     @property
